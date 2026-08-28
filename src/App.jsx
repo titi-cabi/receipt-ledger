@@ -31,6 +31,62 @@ async function fileToBase64(file) {
   });
 }
 
+function csvEscape(value) {
+  const s = String(value ?? "");
+  if (s.includes(",") || s.includes('"') || s.includes("\n")) {
+    return '"' + s.replace(/"/g, '""') + '"';
+  }
+  return s;
+}
+
+function exportEntriesToExcel(folderName, entries) {
+  const headers = [
+    "Date",
+    "Company",
+    "Currency",
+    "Item",
+    "Qty",
+    "Item Price",
+    "Subtotal (excl. VAT)",
+    "VAT Rate %",
+    "VAT Amount",
+    "Total (incl. VAT)",
+  ];
+  const rows = [headers];
+
+  entries.forEach((e) => {
+    const items = e.items && e.items.length ? e.items : [{ name: "", qty: "", price: "" }];
+    items.forEach((it, i) => {
+      // Only show the receipt-level totals on the first item row, to avoid double counting if opened as a table
+      rows.push([
+        e.receipt_date || "",
+        i === 0 ? e.company || "" : "",
+        i === 0 ? e.currency || "" : "",
+        it.name || "",
+        it.qty ?? "",
+        it.price ?? "",
+        i === 0 ? e.subtotal_excl_vat ?? "" : "",
+        i === 0 ? e.vat_rate_percent ?? "" : "",
+        i === 0 ? e.vat_amount ?? "" : "",
+        i === 0 ? e.total_incl_vat ?? "" : "",
+      ]);
+    });
+  });
+
+  const csv = rows.map((row) => row.map(csvEscape).join(",")).join("\r\n");
+  // Prefix with a UTF-8 BOM so Excel opens accented/Thai/etc characters correctly
+  const blob = new Blob(["\uFEFF" + csv], { type: "text/csv;charset=utf-8;" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  const safeName = (folderName || "fund").replace(/[^a-z0-9\-_ ]/gi, "").trim() || "fund";
+  a.href = url;
+  a.download = `${safeName}-receipts.csv`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
 async function extractReceiptData(base64, mediaType) {
   const res = await fetch("/api/extract-receipt", {
     method: "POST",
@@ -419,11 +475,20 @@ function Ledger() {
                 <div className="zilla" style={{ fontSize: 17, fontWeight: 700 }}>{currentFolder?.name}</div>
                 <div className="mono" style={{ fontSize: 11, color: T.inkSoft }}>{entries.length} {entries.length === 1 ? "entry" : "entries"}</div>
               </div>
-              <div style={{ textAlign: "right", display: "flex", alignItems: "center", gap: 14 }}>
+              <div style={{ textAlign: "right", display: "flex", alignItems: "center", gap: 10 }}>
                 <div>
                   <div className="mono" style={{ fontSize: 20, fontWeight: 600, color: T.green }}>{fmt(folderTotal)}</div>
                   <div style={{ fontSize: 10, color: T.inkSoft }}>total filed</div>
                 </div>
+                <button
+                  className="rl-btn"
+                  style={{ background: T.gold, color: "#fff", fontSize: 11, padding: "6px 10px" }}
+                  disabled={!entries.length}
+                  onClick={() => exportEntriesToExcel(currentFolder?.name, entries)}
+                  title={entries.length ? "Download as spreadsheet" : "No entries to export yet"}
+                >
+                  ⬇ Export
+                </button>
                 <button className="rl-btn" style={{ background: "transparent", color: T.red, border: `1px solid ${T.line}`, fontSize: 11, padding: "6px 8px" }} onClick={() => deleteFolder(activeFolder)}>
                   Delete fund
                 </button>
