@@ -19,9 +19,15 @@ export default async function handler(req, res) {
   "subtotal_excl_vat": number,
   "vat_amount": number,
   "vat_rate_percent": number,
-  "total_incl_vat": number
+  "total_incl_vat": number,
+  "category": string
 }
-If a field truly cannot be determined, use "" for strings or 0 for numbers. Do not invent line items that aren't there. Numbers must be plain numbers, no currency symbols or commas.`;
+If a field truly cannot be determined, use "" for strings or 0 for numbers. Do not invent line items that aren't there. Numbers must be plain numbers, no currency symbols or commas.
+
+For "category", classify the receipt into exactly one of these two values (use the exact text):
+- "Material cost" — for physical materials, supplies, equipment, chemicals, lab consumables, parts, or other tangible goods/things being purchased.
+- "Operating costs" — for services, including testing, experiments, or investigations (e.g. FTIR, SEM, sample analysis, OSIT, other lab/testing service bills), transportation, printing, rental, subscriptions, or other non-material services.
+Base the classification on the overall nature of what's being purchased. If genuinely unclear, pick whichever fits best.`;
 
   try {
     const response = await fetch("https://api.anthropic.com/v1/messages", {
