@@ -43,6 +43,7 @@ function exportEntriesToExcel(folderName, entries) {
   const headers = [
     "Date",
     "Company",
+    "Category",
     "Currency",
     "Item",
     "Qty",
@@ -61,6 +62,7 @@ function exportEntriesToExcel(folderName, entries) {
       rows.push([
         e.receipt_date || "",
         i === 0 ? e.company || "" : "",
+        i === 0 ? e.category || "" : "",
         i === 0 ? e.currency || "" : "",
         it.name || "",
         it.qty ?? "",
@@ -351,6 +353,7 @@ function Ledger() {
       company: "",
       date: new Date().toISOString().slice(0, 10),
       currency: "THB",
+      category: "Material cost",
       items: [{ name: "", qty: 1, price: 0 }],
       subtotal_excl_vat: 0,
       vat_amount: 0,
@@ -369,6 +372,7 @@ function Ledger() {
         company: draft.company,
         receipt_date: draft.date || null,
         currency: draft.currency,
+        category: draft.category || "Material cost",
         items: draft.items,
         subtotal_excl_vat: draft.subtotal_excl_vat,
         vat_amount: draft.vat_amount,
@@ -404,6 +408,8 @@ function Ledger() {
   }
 
   const folderTotal = entries.reduce((s, e) => s + (Number(e.total_incl_vat) || 0), 0);
+  const materialTotal = entries.filter((e) => e.category === "Material cost").reduce((s, e) => s + (Number(e.total_incl_vat) || 0), 0);
+  const operatingTotal = entries.filter((e) => e.category === "Operating costs").reduce((s, e) => s + (Number(e.total_incl_vat) || 0), 0);
   const currentFolder = (folders || []).find((f) => f.id === activeFolder);
 
   return (
@@ -470,29 +476,43 @@ function Ledger() {
 
         {activeFolder && (
           <>
-            <div className="rl-card" style={{ padding: "14px 16px", marginBottom: 16, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-              <div>
-                <div className="zilla" style={{ fontSize: 17, fontWeight: 700 }}>{currentFolder?.name}</div>
-                <div className="mono" style={{ fontSize: 11, color: T.inkSoft }}>{entries.length} {entries.length === 1 ? "entry" : "entries"}</div>
-              </div>
-              <div style={{ textAlign: "right", display: "flex", alignItems: "center", gap: 10 }}>
+            <div className="rl-card" style={{ padding: "14px 16px", marginBottom: 16 }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                 <div>
-                  <div className="mono" style={{ fontSize: 20, fontWeight: 600, color: T.green }}>{fmt(folderTotal)}</div>
-                  <div style={{ fontSize: 10, color: T.inkSoft }}>total filed</div>
+                  <div className="zilla" style={{ fontSize: 17, fontWeight: 700 }}>{currentFolder?.name}</div>
+                  <div className="mono" style={{ fontSize: 11, color: T.inkSoft }}>{entries.length} {entries.length === 1 ? "entry" : "entries"}</div>
                 </div>
-                <button
-                  className="rl-btn"
-                  style={{ background: T.gold, color: T.greenDark, fontSize: 11, padding: "6px 10px" }}
-                  disabled={!entries.length}
-                  onClick={() => exportEntriesToExcel(currentFolder?.name, entries)}
-                  title={entries.length ? "Download as spreadsheet" : "No entries to export yet"}
-                >
-                  ⬇ Export
-                </button>
-                <button className="rl-btn" style={{ background: "transparent", color: T.red, border: `1px solid ${T.line}`, fontSize: 11, padding: "6px 8px" }} onClick={() => deleteFolder(activeFolder)}>
-                  Delete fund
-                </button>
+                <div style={{ textAlign: "right", display: "flex", alignItems: "center", gap: 10 }}>
+                  <div>
+                    <div className="mono" style={{ fontSize: 20, fontWeight: 600, color: T.green }}>{fmt(folderTotal)}</div>
+                    <div style={{ fontSize: 10, color: T.inkSoft }}>total filed</div>
+                  </div>
+                  <button
+                    className="rl-btn"
+                    style={{ background: T.gold, color: T.greenDark, fontSize: 11, padding: "6px 10px" }}
+                    disabled={!entries.length}
+                    onClick={() => exportEntriesToExcel(currentFolder?.name, entries)}
+                    title={entries.length ? "Download as spreadsheet" : "No entries to export yet"}
+                  >
+                    ⬇ Export
+                  </button>
+                  <button className="rl-btn" style={{ background: "transparent", color: T.red, border: `1px solid ${T.line}`, fontSize: 11, padding: "6px 8px" }} onClick={() => deleteFolder(activeFolder)}>
+                    Delete fund
+                  </button>
+                </div>
               </div>
+              {entries.length > 0 && (
+                <div style={{ display: "flex", gap: 18, marginTop: 12, paddingTop: 10, borderTop: `1px dashed ${T.line}` }}>
+                  <div>
+                    <div style={{ fontSize: 10, color: T.inkSoft }}>Material cost (ค่าวัสดุ)</div>
+                    <div className="mono" style={{ fontSize: 14, fontWeight: 600 }}>{fmt(materialTotal)}</div>
+                  </div>
+                  <div>
+                    <div style={{ fontSize: 10, color: T.inkSoft }}>Operating costs (ค่าใช้สอย)</div>
+                    <div className="mono" style={{ fontSize: 14, fontWeight: 600 }}>{fmt(operatingTotal)}</div>
+                  </div>
+                </div>
+              )}
             </div>
 
             {scanState === "idle" && (
@@ -553,6 +573,12 @@ function DraftReview({ draft, onField, onItem, onRemoveItem, onAddItem, onCancel
         <Field label="Date"><input className="rl-input" value={draft.date} onChange={(e) => onField("date", e.target.value)} placeholder="YYYY-MM-DD" /></Field>
         <Field label="Currency"><input className="rl-input" value={draft.currency} onChange={(e) => onField("currency", e.target.value)} /></Field>
         <Field label="VAT rate %"><input className="rl-input" type="number" value={draft.vat_rate_percent} onChange={(e) => onField("vat_rate_percent", Number(e.target.value))} /></Field>
+        <Field label="Category">
+          <select className="rl-input" value={draft.category || "Material cost"} onChange={(e) => onField("category", e.target.value)} style={{ appearance: "auto" }}>
+            <option value="Material cost">Material cost (ค่าวัสดุ)</option>
+            <option value="Operating costs">Operating costs (ค่าใช้สอย)</option>
+          </select>
+        </Field>
       </div>
 
       <div style={{ fontSize: 11, color: T.inkSoft, marginBottom: 4, fontWeight: 600 }}>ITEMS</div>
@@ -603,7 +629,23 @@ function EntryCard({ entry, onDelete, justSaved }) {
       <div style={{ display: "flex", justifyContent: "space-between", cursor: "pointer" }} onClick={() => setOpen((o) => !o)}>
         <div>
           <div className="zilla" style={{ fontWeight: 700, fontSize: 15 }}>{entry.company || "Unnamed"}</div>
-          <div className="mono" style={{ fontSize: 11, color: T.inkSoft }}>{entry.receipt_date || "—"}</div>
+          <div style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 2 }}>
+            <div className="mono" style={{ fontSize: 11, color: T.inkSoft }}>{entry.receipt_date || "—"}</div>
+            {entry.category && (
+              <span
+                className="mono"
+                style={{
+                  fontSize: 9.5,
+                  padding: "2px 6px",
+                  borderRadius: 3,
+                  background: entry.category === "Material cost" ? "#E3EDF4" : "#FBF0C7",
+                  color: T.greenDark,
+                }}
+              >
+                {entry.category === "Material cost" ? "ค่าวัสดุ" : "ค่าใช้สอย"}
+              </span>
+            )}
+          </div>
         </div>
         <div className="mono" style={{ fontWeight: 600, fontSize: 16, color: T.ink }}>
           {entry.currency || ""} {fmt(entry.total_incl_vat)}
