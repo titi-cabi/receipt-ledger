@@ -2,15 +2,15 @@ import { useState, useEffect, useRef } from "react";
 import { supabase } from "./supabaseClient";
 
 const T = {
-  paper: "#EFEAE0",
-  paperDark: "#E3DCC9",
-  ink: "#232320",
-  inkSoft: "#5B5648",
-  green: "#1F4D3D",
-  greenDark: "#153529",
-  red: "#B23A2E",
-  gold: "#A6812E",
-  line: "#C9C0AE",
+  paper: "#F3F7FB",
+  paperDark: "#E1EAF2",
+  ink: "#122B40",
+  inkSoft: "#54697C",
+  green: "#0E4C75",
+  greenDark: "#0A3A5C",
+  red: "#D64550",
+  gold: "#F5C518",
+  line: "#C9D6E0",
 };
 
 const FONT_IMPORT =
@@ -191,10 +191,10 @@ function AuthScreen() {
       <GlobalStyle />
       <div className="rl-card" style={{ maxWidth: 360, width: "100%", padding: 28, background: T.paper, border: "none" }}>
         <div className="zilla" style={{ fontSize: 24, fontWeight: 700, color: T.ink, marginBottom: 2 }}>
-          Ledger
+          Easy Receipt
         </div>
         <div className="mono" style={{ fontSize: 11, color: T.inkSoft, marginBottom: 22 }}>
-          {mode === "signin" ? "sign in to your team's ledger" : "create your account"}
+          {mode === "signin" ? "by CABI-SEA · sign in to your team" : "create your account"}
         </div>
 
         <form onSubmit={submit}>
@@ -412,8 +412,8 @@ function Ledger() {
 
       <header style={{ background: T.greenDark, color: T.paper, padding: "18px 20px 14px", borderBottom: `3px double ${T.gold}`, display: "flex", justifyContent: "space-between", alignItems: "flex-end" }}>
         <div>
-          <div className="zilla" style={{ fontSize: 22, fontWeight: 700 }}>Ledger</div>
-          <div className="mono" style={{ fontSize: 11, opacity: 0.75, marginTop: 2 }}>receipts &amp; invoices, filed by fund</div>
+          <div className="zilla" style={{ fontSize: 22, fontWeight: 700 }}>Easy Receipt</div>
+          <div className="mono" style={{ fontSize: 11, opacity: 0.75, marginTop: 2 }}>by CABI-SEA · filed by fund</div>
         </div>
         <button
           className="rl-btn"
@@ -482,7 +482,7 @@ function Ledger() {
                 </div>
                 <button
                   className="rl-btn"
-                  style={{ background: T.gold, color: "#fff", fontSize: 11, padding: "6px 10px" }}
+                  style={{ background: T.gold, color: T.greenDark, fontSize: 11, padding: "6px 10px" }}
                   disabled={!entries.length}
                   onClick={() => exportEntriesToExcel(currentFolder?.name, entries)}
                   title={entries.length ? "Download as spreadsheet" : "No entries to export yet"}
